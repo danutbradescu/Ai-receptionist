@@ -1,0 +1,84 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Tenant {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  passwordHash String   
+  name      String
+  plan      PlanType @default(TRIAL)
+  agents    Agent[]
+  calls     Call[]
+  bookings     Booking[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Agent {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name            String   @default("Andra")
+  
+  // ID-urile de la Retell stocate per client
+  retellAgentId   String?  @unique
+  retellLlmId     String?  @unique
+  
+  phoneNumber     String?  
+  cartesiaVoiceId String?
+  systemPrompt    String?  @db.Text
+  calls           Call[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Call {
+  id              String     @id @default(cuid())
+  tenantId        String
+  tenant          Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  agentId         String
+  agent           Agent      @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  status          CallStatus @default(IN_PROGRESS)
+  durationSeconds Int?
+  transcript      String?    @db.Text
+  summary         String?    @db.Text
+  sentiment       Sentiment? 
+  recordingUrl    String?
+  createdAt       DateTime   @default(now())
+}
+
+model Booking {
+  id        String   @id @default(cuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clientName String
+  date      String
+  time      String
+  status    String   @default("confirmed") // confirmed, cancelled, etc.
+  createdAt DateTime @default(now())
+}
+
+enum PlanType {
+  TRIAL
+  STARTER
+  PRO
+}
+
+enum CallStatus {
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+  MISSED
+}
+
+enum Sentiment {
+  POSITIVE
+  NEUTRAL
+  NEGATIVE
+}

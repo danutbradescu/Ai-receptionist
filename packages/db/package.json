@@ -1,0 +1,22 @@
+{
+  "name": "@voltera/db",
+  "version": "1.0.0",
+  "main": "index.ts",
+  "types": "index.ts",
+  "scripts": {
+    "seed": "npx tsx seed.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.10.2",
+    "bcryptjs": "^3.0.3"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^3.0.0",
+    "dotenv": "^16.4.7",
+    "prisma": "^5.10.2",
+    "tsx": "^4.21.0"
+  },
+  "prisma": {
+    "seed": "npx tsx seed.ts"
+  }
+}
