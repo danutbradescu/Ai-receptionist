@@ -15,6 +15,7 @@ env:
   REGION: europe-west1
   SERVICE_NAME: voltera-api
   IMAGE_NAME: voltera-api
+  REGISTRY: europe-west1-docker.pkg.dev
 
 jobs:
   deploy:
@@ -36,14 +37,14 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
-      - name: Configure Docker for GCR
+      - name: Configure Docker for Artifact Registry
         run: |
-          gcloud auth configure-docker gcr.io
+          gcloud auth configure-docker europe-west1-docker.pkg.dev
 
       - name: Build and push Docker image
         run: |
-          IMAGE_TAG="gcr.io/$PROJECT_ID/$IMAGE_NAME:${{ github.sha }}"
-          IMAGE_LATEST="gcr.io/$PROJECT_ID/$IMAGE_NAME:latest"
+          IMAGE_TAG="$REGISTRY/$PROJECT_ID/$IMAGE_NAME/$IMAGE_NAME:${{ github.sha }}"
+          IMAGE_LATEST="$REGISTRY/$PROJECT_ID/$IMAGE_NAME/$IMAGE_NAME:latest"
           
           docker build -t $IMAGE_TAG -t $IMAGE_LATEST .
           docker push $IMAGE_TAG
@@ -52,7 +53,7 @@ jobs:
       - name: Deploy to Cloud Run
         run: |
           gcloud run deploy $SERVICE_NAME \
-            --image gcr.io/$PROJECT_ID/$IMAGE_NAME:${{ github.sha }} \
+            --image $REGISTRY/$PROJECT_ID/$IMAGE_NAME/$IMAGE_NAME:${{ github.sha }} \
             --platform managed \
             --region $REGION \
             --allow-unauthenticated \
@@ -77,7 +78,6 @@ jobs:
 
       - name: Notify deployment
         run: |
-          echo "✓ Deployment complet!"
+          echo "✅ Deployment complet!"
           echo "Serviciu: $SERVICE_NAME"
           echo "Regiune: $REGION"
-          echo "Tag imagine: gcr.io/$PROJECT_ID/$IMAGE_NAME:${{ github.sha }}"
