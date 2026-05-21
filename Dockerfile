@@ -22,7 +22,7 @@ COPY packages ./packages
 COPY apps ./apps
 
 # Generăm clientul Prisma pentru pachetul db
-RUN pnpm --filter @voltera/db exec prisma generate
+RUN cd packages/db && npx prisma generate
 
 # Compilăm TypeScript în JavaScript pentru API
 RUN pnpm --filter api run build
