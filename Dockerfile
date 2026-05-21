@@ -19,7 +19,7 @@ COPY apps ./apps
 RUN pnpm install --frozen-lockfile
 
 # Acum binarul prisma e în node_modules/.bin din rădăcină
-RUN ./node_modules/.bin/prisma generate --schema=./packages/db/prisma/schema.prisma
+RUN pnpm --filter @voltera/db run db:generate
 
 # Compilăm TypeScript
 RUN pnpm --filter api run build

@@ -4,6 +4,7 @@
   "main": "index.ts",
   "types": "index.ts",
   "scripts": {
+    "db:generate": "prisma generate --schema=./prisma/schema.prisma",
     "seed": "npx tsx seed.ts"
   },
   "dependencies": {
