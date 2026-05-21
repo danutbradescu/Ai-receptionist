@@ -1,30 +1,27 @@
 # === BUILDER STAGE ===
 FROM node:20-slim AS builder
 
-# Instalăm dependențele necesare pentru Prisma și sistem
 RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Instalăm pnpm
 RUN npm install -g pnpm
 
-# Copiem fișierele workspace
 COPY pnpm-workspace.yaml .
 COPY package.json .
 COPY pnpm-lock.yaml .
 
-# Instalăm dependențele workspace
-RUN pnpm install --frozen-lockfile
-
-# Copiem pachetele workspace
+# Copiem packages ÎNAINTE de install ca pnpm să vadă workspace-ul complet
 COPY packages ./packages
 COPY apps ./apps
 
-# Generăm clientul Prisma pentru pachetul db
-RUN cd packages/db && npx prisma generate
+# Instalăm toate dependențele inclusiv cele din sub-pachete
+RUN pnpm install --frozen-lockfile
 
-# Compilăm TypeScript în JavaScript pentru API
+# Acum binarul prisma e în node_modules/.bin din rădăcină
+RUN ./node_modules/.bin/prisma generate --schema=./packages/db/prisma/schema.prisma
+
+# Compilăm TypeScript
 RUN pnpm --filter api run build
 
 # === PRODUCTION STAGE ===
@@ -34,10 +31,8 @@ RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Instalăm pnpm
 RUN npm install -g pnpm
 
-# Copiem doar fișierele necesare din builder
 COPY --from=builder /app/pnpm-workspace.yaml .
 COPY --from=builder /app/package.json .
 COPY --from=builder /app/pnpm-lock.yaml .
@@ -45,14 +40,11 @@ COPY --from=builder /app/packages ./packages
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
 COPY --from=builder /app/apps/api/package.json ./apps/api/
 
-# Instalăm doar dependențele de producție
 RUN pnpm install --prod --frozen-lockfile
 
-# Cloud Run expune automat portul 8080
 ENV PORT=8080
 EXPOSE 8080
 
-# Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD node -e "require('http').get('http://localhost:8080', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})"
 
