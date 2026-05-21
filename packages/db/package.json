@@ -13,12 +13,13 @@
     "bcryptjs": "^3.0.3"
   },
   "devDependencies": {
-    "@types/bcryptjs": "^3.0.0",
-    "dotenv": "^16.4.7",
-    "prisma": "^5.10.2",
-    "tsx": "^4.21.0",
-    "typescript": "^5.0.0"
-  },
+  "@types/bcryptjs": "^3.0.0",
+  "@types/node": "^20.0.0",
+  "dotenv": "^16.4.7",
+  "prisma": "^5.10.2",
+  "tsx": "^4.21.0",
+  "typescript": "^5.0.0"
+ },
   "prisma": {
     "seed": "npx tsx seed.ts"
   }
