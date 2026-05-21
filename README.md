@@ -1,23 +1,25 @@
+
 ```
 voltera
 ├─ .agents
 │  └─ skills
 │     └─ neon-postgres
-│        └─ SKILL.md
+├─ .gcloudignore
+├─ .npmrc
 ├─ apps
 │  ├─ api
-│  │  ├─ Dockerfile
 │  │  ├─ package.json
-│  │  └─ src
-│  │     ├─ plugins
-│  │     │  └─ auth.ts
-│  │     ├─ routes
-│  │     │  └─ auth
-│  │     │     ├─ login.ts
-│  │     │     └─ register.ts
-│  │     ├─ server.ts
-│  │     └─ services
-│  │        └─ promptBuilder.ts
+│  │  ├─ src
+│  │  │  ├─ plugins
+│  │  │  │  └─ auth.ts
+│  │  │  ├─ routes
+│  │  │  │  └─ auth
+│  │  │  │     ├─ login.ts
+│  │  │  │     └─ register.ts
+│  │  │  ├─ server.ts
+│  │  │  └─ services
+│  │  │     └─ promptBuilder.ts
+│  │  └─ tsconfig.json
 │  └─ web
 │     ├─ .eslintrc.json
 │     ├─ lib
@@ -48,6 +50,8 @@ voltera
 │     │     └─ page.tsx
 │     ├─ tailwind.config.ts
 │     └─ tsconfig.json
+├─ deploy.sh
+├─ Dockerfile
 ├─ package.json
 ├─ packages
 │  ├─ config
@@ -59,8 +63,8 @@ voltera
 │     ├─ package.json
 │     ├─ prisma
 │     │  └─ schema.prisma
-│     ├─ prisma.config.ts
-│     └─ seed.ts
+│     ├─ seed.ts
+│     └─ tsconfig.json
 ├─ pnpm-lock.yaml
 ├─ pnpm-workspace.yaml
 ├─ README.md
