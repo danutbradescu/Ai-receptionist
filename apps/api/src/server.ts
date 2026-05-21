@@ -1,4 +1,5 @@
 import Fastify from 'fastify';
+import cookie from '@fastify/cookie';
 import cors from '@fastify/cors';
 import Retell from 'retell-sdk';
 import { prisma } from '@voltera/db';
@@ -12,19 +13,44 @@ import loginRoute from './routes/auth/login';
 dotenv.config();
 
 const fastify = Fastify({ logger: true });
+
+// 1. CORS (Trebuie configurat ÎNAINTE de rute)
+const ALLOWED_ORIGINS = process.env.CORS_ORIGINS 
+  ? process.env.CORS_ORIGINS.split(',').map(o => o.trim())
+  : ['http://localhost:3000'];
+
+fastify.register(cors, { 
+  origin: ALLOWED_ORIGINS,
+  credentials: true // Permite trimiterea cookie-urilor
+});
+
+fastify.register(cookie, {
+  secret: process.env.COOKIE_SECRET || 'un-secret-foarte-lung-si-sigur', // opțional pentru semnare
+  parseOptions: {}
+});
+
 fastify.register(authPlugin);
 fastify.register(registerRoute, { prefix: '/api/auth' });
 fastify.register(loginRoute, { prefix: '/api/auth' });
 
-// Inițializăm SDK-ul Retell folosind cheia din .env
+// --- RETELL CONFIG ---
 const retell = new Retell({
   apiKey: process.env.RETELL_API_KEY as string,
 });
 
-// Permitem frontend-ului să comunice cu API-ul nostru
-fastify.register(cors, { origin: '*' });
+const start = async () => {
+  try {
+    // Cloud Run necesită host '0.0.0.0' și portul din variabila de mediu PORT
+    const port = Number(process.env.PORT) || 3001;
+    await fastify.listen({ port: port, host: '0.0.0.0' });
+    console.log(`Serverul rulează pe portul ${port}`);
+  } catch (err) {
+    fastify.log.error(err);
+    process.exit(1);
+  }
+};
+start();
 
-// 1. Endpoint de test - Verificăm DB-ul
 fastify.get('/api/test-db', async (request, reply) => {
   const agents = await prisma.agent.findMany();
   return { status: 'succes', database_agents: agents };
@@ -72,7 +98,7 @@ fastify.post('/api/agent/update-prompt', async (request, reply) => {
     await retell.agent.update(RETELL_AGENT_ID, {
       agent_name: agent.name,
       system_prompt: newPrompt
-    });
+    }as any);
 
     // 4. Salvăm și în baza noastră de date ca să fim sincronizați
     await prisma.agent.update({
@@ -152,6 +178,57 @@ fastify.post('/api/webhooks/retell', async (request, reply) => {
   } catch (error) {
     fastify.log.error(error, 'Eroare la procesarea webhook-ului:'); 
     return reply.status(500).send({ error: 'Eroare internă webhook' });
+  }
+});
+
+
+// Ruta de UPDATE (Editare)
+fastify.patch('/api/bookings/:id', async (request, reply) => {
+  const { id } = request.params as { id: string };
+  const { clientName, date, time } = request.body as any;
+  
+  const updated = await prisma.booking.update({
+    where: { id },
+    data: { clientName, date, time }
+  });
+  return updated;
+});
+
+fastify.get('/api/bookings', async (request, reply) => {
+  try {
+    await request.jwtVerify();
+    const { tenantId } = request.user as { tenantId: string };
+
+    const bookings = await prisma.booking.findMany({
+      where: { tenantId },
+      orderBy: { date: 'asc' }
+    });
+
+    return bookings;
+  } catch (err) {
+    return reply.code(401).send({ error: "Neautorizat" });
+  }
+});
+
+fastify.post('/api/bookings/manual', async (request, reply) => {
+  try {
+    await request.jwtVerify();
+    const { tenantId } = request.user as { tenantId: string };
+    const { clientName, date, time } = request.body as any;
+
+    const newBooking = await prisma.booking.create({
+      data: {
+        tenantId,
+        clientName,
+        date,
+        time,
+        status: "manual" // Marcăm că e adăugat de om, nu de AI
+      }
+    });
+
+    return newBooking;
+  } catch (err) {
+    return reply.code(500).send({ error: "Nu s-a putut salva programarea." });
   }
 });
 
@@ -283,18 +360,5 @@ fastify.patch('/api/agent', async (request, reply) => {
     return reply.code(500).send({ error: 'Eroare la salvare: ' + error.message });
   }
 });
-
-
-const start = async () => {
-  try {
-    const port = process.env.PORT ? parseInt(process.env.PORT) : 3001;
-    await fastify.listen({ port });
-    console.log(`🚀 VoiceRO API a pornit cu succes pe http://localhost:${port}`);
-  } catch (err) {
-    fastify.log.error(err);
-    process.exit(1);
-  }
-};
-
 
 start();

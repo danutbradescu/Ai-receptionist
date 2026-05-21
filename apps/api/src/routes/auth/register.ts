@@ -12,10 +12,15 @@ export default async function (fastify: FastifyInstance) {
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
-    const tenant = await prisma.tenant.create({
-      data: { email, passwordHash, name }
-    });
+    
+    try {
+      const tenant = await prisma.tenant.create({
+        data: { email, passwordHash, name }
+      });
 
-    return { status: 'success', tenantId: tenant.id };
+      return { status: 'success', tenantId: tenant.id };
+    } catch (error) {
+      return reply.status(500).send({ error: 'Eroare la crearea contului' });
+    }
   });
 }

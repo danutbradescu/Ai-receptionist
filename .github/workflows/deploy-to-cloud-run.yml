@@ -1,0 +1,83 @@
+name: Deploy API to Google Cloud Run
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'apps/api/**'
+      - 'packages/db/**'
+      - 'Dockerfile'
+      - '.github/workflows/deploy-to-cloud-run.yml'
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  REGION: europe-west1
+  SERVICE_NAME: voltera-api
+  IMAGE_NAME: voltera-api
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for GCR
+        run: |
+          gcloud auth configure-docker gcr.io
+
+      - name: Build and push Docker image
+        run: |
+          IMAGE_TAG="gcr.io/$PROJECT_ID/$IMAGE_NAME:${{ github.sha }}"
+          IMAGE_LATEST="gcr.io/$PROJECT_ID/$IMAGE_NAME:latest"
+          
+          docker build -t $IMAGE_TAG -t $IMAGE_LATEST .
+          docker push $IMAGE_TAG
+          docker push $IMAGE_LATEST
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy $SERVICE_NAME \
+            --image gcr.io/$PROJECT_ID/$IMAGE_NAME:${{ github.sha }} \
+            --platform managed \
+            --region $REGION \
+            --allow-unauthenticated \
+            --update-env-vars DATABASE_URL="${{ secrets.DATABASE_URL }}" \
+            --update-env-vars JWT_SECRET="${{ secrets.JWT_SECRET }}" \
+            --update-env-vars RETELL_API_KEY="${{ secrets.RETELL_API_KEY }}" \
+            --update-env-vars CORS_ORIGINS="${{ secrets.CORS_ORIGINS }}" \
+            --update-env-vars NODE_ENV="production" \
+            --memory 512Mi \
+            --cpu 1 \
+            --timeout 3600 \
+            --max-instances 100 \
+            --min-instances 1 \
+            --port 8080 \
+            --ingress all
+
+      - name: Get service URL
+        run: |
+          gcloud run services describe $SERVICE_NAME \
+            --region $REGION \
+            --format='value(status.url)'
+
+      - name: Notify deployment
+        run: |
+          echo "✓ Deployment complet!"
+          echo "Serviciu: $SERVICE_NAME"
+          echo "Regiune: $REGION"
+          echo "Tag imagine: gcr.io/$PROJECT_ID/$IMAGE_NAME:${{ github.sha }}"
