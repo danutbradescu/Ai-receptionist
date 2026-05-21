@@ -1,9 +1,10 @@
 {
   "name": "@voltera/db",
   "version": "1.0.0",
-  "main": "index.ts",
-  "types": "index.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
+    "build": "tsc",
     "db:generate": "prisma generate --schema=./prisma/schema.prisma",
     "seed": "npx tsx seed.ts"
   },
